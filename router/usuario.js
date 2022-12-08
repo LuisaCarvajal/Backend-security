@@ -1,23 +1,48 @@
 const{ Router } = require('express');
 const router = Router ();
 const Usuario = require('../Modelo/Usuario');
+const { validationResult, check } = require('express-validator');
+const bycript = require('bcryptjs');
+const {validarJWT} = require('../middlewares/validar-jwt.js');
+const {validarRolAdmin} = require ('../middlewares/validar-rol-admin');
 
 
-router.post('/', async function(req, res){
+router.post('/',[
+    check('nombre', 'invalid.nombre').not().isEmpty(),
+    check('email', 'invalid.email').isEmail(),
+    check('rol', 'invalid.rol').isIn(['ADMIN', 'DOCENTE']),
+    check('contrasena', 'invalid.contrasena').not().isEmpty(),
+    validarJWT,
+    validarRolAdmin
 
-    try{
-        console.log('objeto recibido', req.body);
+], async function(req, res){
 
-        const existeUsuario = await Usuario.findOne({ email: req.body.email });
-        console.log('Respuesta existe Usuario', existeUsuario);
-        if (existeUsuario) {
-            return res.send('Email ya existe');
+    try{       
+            console.log(req.body);
+            //validacion campos requeridos 
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ mensaje: errors.array() });
+            }
+    
+            //validacion email
+            const existeEmail = await Usuario.findOne({ email: req.body.email });
+            if (existeEmail) {
+                return res.status(400).json({ mensaje: 'Email ya existe' });
         }
+
+       
 
         let usuario = new Usuario ();
         usuario.nombre = req.body.nombre;
         usuario.email = req.body.email;
         usuario.estado = req.body.estado;
+        usuario.rol = req.body.rol;
+
+        const salt = bycript.genSaltSync();
+        const contrasena = bycript.hashSync(req.body.contrasena, salt);
+        usuario.contrasena = contrasena;
+
         usuario.fechaCreacion = new Date();
         usuario.fechaActualizacion = new Date();
        
@@ -29,20 +54,20 @@ router.post('/', async function(req, res){
 
     }catch(error){
         console.log(error); 
-        res.send('Ocurrio un error');
+        res.status(500).json({ mensaje: 'Internal server error' });
 
     }
         
 });
 
-router.get('/', async function(req, res){
+router.get('/',[validarJWT, validarRolAdmin], async function(req, res){
     try {
-        const usuario = await Usuario.find();
-        res.send(usuario);
+        const usuarios = await Usuario.find();
+        res.send(usuarios);
 
     }catch(error) {
         console.log(error);
-        res.send('Ocurrio un error');
+        return res.status(500).send({ mensaje: 'Internal error server'});
     }
  
 });
@@ -69,6 +94,7 @@ router.put('/:usuarioId', async function(req, res){
         usuario.email = req.body.email;
         usuario.nombre = req.body.nombre;
         usuario.estado = req.body.estado; 
+        usuario.rol = req.body.rol;
         usuario.fechaActualizacion = new Date();
 
         usuario = await usuario.save();

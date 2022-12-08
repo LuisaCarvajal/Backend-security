@@ -1,9 +1,10 @@
 const{ Router } = require('express');
 const TipoEquipo = require('../Modelo/TipoEquipo');
-
 const router = Router ();
+const {validarJWT} = require ('../middlewares/validar-jwt');
+const {validarRolAdmin} = require ('../middlewares/validar-rol-admin');
 
-router.get('/', async function(req, res){
+router.get('/', [validarJWT, validarRolAdmin],async function(req, res){
     try {
         const tipos = await TipoEquipo.find();
         res.send(tipos);
@@ -15,7 +16,7 @@ router.get('/', async function(req, res){
     
 });
 
-router.post('/', async function(req, res){
+router.post('/',[validarJWT, validarRolAdmin], async function(req, res){
     try{
         let tipoEquipo = new TipoEquipo();
     
@@ -33,7 +34,7 @@ router.post('/', async function(req, res){
 
 });
 
-router.put('/:tipoEquipoId', async function(req, res){
+router.put('/:tipoEquipoId',[validarJWT, validarRolAdmin], async function(req, res){
     try{
         let tipoEquipo = await TipoEquipo.findById(req.params.tipoEquipoId);
     

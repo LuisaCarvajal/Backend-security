@@ -1,9 +1,10 @@
 const{ Router } = require('express');
 const Marca = require ('../Modelo/Marca');
-
 const router = Router ();
+const {validarJWT} = require ('../middlewares/validar-jwt');
+const {validarRolAdmin} = require ('../middlewares/validar-rol-admin');
 
-router.get('/', async function(req, res){
+router.get('/',[validarJWT,validarRolAdmin], async function(req, res){
    try{
     const marcas = await Marca.find();
     res.send(marcas);
@@ -15,7 +16,7 @@ router.get('/', async function(req, res){
    
 });
 
-router.post('/', async function(req, res){
+router.post('/',[validarJWT, validarRolAdmin], async function(req, res){
     try{
         let marca = new Marca();
         marca.nombre = req.body.nombre;
@@ -33,7 +34,7 @@ router.post('/', async function(req, res){
 
 });
 
-router.put('/:marcaId', async function(req, res){
+router.put('/:marcaId',[validarJWT, validarRolAdmin], async function(req, res){
     try{
         let marca = await Marca.findById(req.params.marcaId)
         if (!marca) {
